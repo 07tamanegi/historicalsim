@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HISTORIA — 架空国家歴史シミュレーター</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Cinzel:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #060a14;
+  --panel:     #090d1a;
+  --panel2:    #0d1222;
+  --b0:        #08101e;
+  --b1:        #122038;
+  --b2:        #1e3860;
+  --b3:        #2a5090;
+  --gold:      #c8a84b;
+  --goldD:     #7a6028;
+  --goldBg:    rgba(200,168,75,0.08);
+  --blue:      #4a90d8;
+  --blueD:     #1a3460;
+  --red:       #d05858;
+  --redD:      #601820;
+  --green:     #50c888;
+  --greenD:    #184828;
+  --text:      #b8b0a0;
+  --textD:     #50483a;
+  --textB:     #e0d8c0;
+  --warn:      #d09040;
+}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+::-webkit-scrollbar { width:5px; }
+::-webkit-scrollbar-track { background:var(--b0); }
+::-webkit-scrollbar-thumb { background:var(--b2); border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:var(--b3); }
+html, body { height:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:'Share Tech Mono',monospace; font-size:11px; }
+#app {
+  display:grid;
+  height:100vh;
+  grid-template-rows:54px 1fr;
+  grid-template-columns:270px 1fr 260px;
+  grid-template-areas:"hdr hdr hdr" "lft map rgt";
+}
+/* ─── HEADER ─── */
+#hdr {
+  grid-area:hdr;
+  background:var(--panel);
+  border-bottom:1px solid var(--b2);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 14px;
+  z-index:10;
+}
+#brand { display:flex; flex-direction:column; justify-content:center; }
+#brand-title {
+  font-family:'Cinzel Decorative',serif;
+  font-size:17px;
+  color:var(--gold);
+  letter-spacing:4px;
+  text-shadow:0 0 24px rgba(200,168,75,0.5);
+  line-height:1;
+}
+#brand-sub { font-size:8px; color:var(--textD); letter-spacing:3px; margin-top:3px; text-transform:uppercase; }
+#menu-btns { display:flex; gap:6px; align-items:center; }
+/* ─── TIME BLOCK ─── */
+#time-block {
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:5px;
+}
+#time-row { display:flex; gap:14px; align-items:baseline; }
+#time-display { font-family:'Share Tech Mono',monospace; font-size:14px; color:var(--textB); letter-spacing:3px; }
+#speed-badge {
+  font-size:9px;
+  color:var(--gold);
+  letter-spacing:2px;
+  padding:1px 6px;
+  border:1px solid var(--goldD);
+  background:var(--goldBg);
+}
+#speed-btns { display:flex; gap:3px; align-items:center; }
+#speed-bar-row { display:flex; align-items:center; gap:6px; }
+#speed-bar {
+  -webkit-appearance:none;
+  width:110px; height:3px;
+  background:var(--b1);
+  border-radius:2px;
+  cursor:pointer;
+  outline:none;
+}
+#speed-bar::-webkit-slider-thumb {
+  -webkit-appearance:none;
+  width:11px; height:11px;
+  background:var(--gold);
+  border-radius:50%;
+  cursor:pointer;
+  box-shadow:0 0 6px rgba(200,168,75,0.4);
+}
+/* ─── PANELS ─── */
+#lft { grid-area:lft; background:var(--panel); border-right:1px solid var(--b1); display:flex; flex-direction:column; overflow:hidden; }
+#rgt { grid-area:rgt; background:var(--panel); border-left:1px solid var(--b1); display:flex; flex-direction:column; overflow:hidden; }
+#map-area { grid-area:map; background:#040810; overflow:auto; position:relative; cursor:grab; }
+#map-area:active { cursor:grabbing; }
+#map-wrapper { display:inline-block; position:relative; transform-origin:top left; }
+#zoom-controls {
+  position:absolute; bottom:10px; right:10px; display:flex; flex-direction:column; gap:3px; z-index:20;
+}
+#zoom-controls .btn { width:28px; height:28px; display:flex; align-items:center; justify-content:center; font-size:14px; padding:0; }
+.panel-hdr {
+  padding:9px 12px 8px;
+  border-bottom:1px solid var(--b1);
+  font-family:'Cinzel',serif;
+  font-size:10px;
+  color:var(--gold);
+  letter-spacing:3px;
+  text-transform:uppercase;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-shrink:0;
+}
+.panel-body { flex:1; overflow-y:auto; padding:10px 12px; }
+/* ─── BUTTONS ─── */
+.btn {
+  background:var(--b0);
+  border:1px solid var(--b2);
+  color:var(--text);
+  font-family:'Share Tech Mono',monospace;
+  font-size:9px;
+  padding:4px 9px;
+  cursor:pointer;
+  letter-spacing:1px;
+  transition:all .12s;
+  white-space:nowrap;
+}
+.btn:hover { background:var(--b1); border-color:var(--gold); color:var(--textB); }
+.btn.active { background:var(--blueD); border-color:var(--blue); color:var(--textB); }
+.btn.btn-gold { border-color:var(--goldD); color:var(--gold); }
+.btn.btn-gold:hover { background:var(--goldBg); border-color:var(--gold); }
+.btn.btn-pause { min-width:60px; text-align:center; }
+/* ─── LOG ─── */
+#log-body { flex:1; overflow-y:auto; padding:6px 8px; }
+.log-item {
+  padding:4px 7px 4px 9px;
+  border-left:2px solid var(--b2);
+  margin-bottom:3px;
+  font-size:9.5px;
+  line-height:1.55;
+  color:var(--textD);
+}
+.log-item.fresh { border-color:var(--gold); color:var(--text); }
+.log-item.war   { border-color:var(--red); }
+.log-item.found { border-color:var(--green); }
+.log-item.rebel { border-color:var(--warn); }
+.log-item.fall  { border-color:#8050a0; }
+.log-item.peace { border-color:var(--blue); }
+.log-yr { font-size:8px; color:var(--textD); margin-bottom:1px; }
+/* ─── NATION DETAIL ─── */
+.nd-name { font-family:'Cinzel',serif; font-size:13px; color:var(--textB); line-height:1.2; }
+.nd-bar { height:2px; margin:8px 0 12px; border-radius:1px; opacity:.7; }
+.srow { display:flex; justify-content:space-between; align-items:center; padding:3px 0; border-bottom:1px solid rgba(18,32,56,.7); }
+.slbl { color:var(--textD); font-size:9.5px; }
+.sval { color:var(--textB); font-size:10px; }
+.sbar-wrap { width:72px; height:3px; background:var(--b1); border-radius:2px; overflow:hidden; }
+.sbar { height:100%; border-radius:2px; transition:width .4s; }
+.sec-title {
+  font-family:'Cinzel',serif;
+  font-size:8px;
+  color:var(--gold);
+  letter-spacing:3px;
+  text-transform:uppercase;
+  margin:11px 0 6px;
+  padding-bottom:3px;
+  border-bottom:1px solid var(--goldD);
+}
+.empty-st { color:var(--textD); text-align:center; padding:32px 16px; line-height:2.2; font-size:11px; }
+/* ─── CANVAS / MAP ─── */
+#map-canvas { cursor:crosshair; display:block; image-rendering:pixelated; }
+#tooltip {
+  position:fixed;
+  background:rgba(9,13,26,.97);
+  border:1px solid var(--b3);
+  padding:8px 12px;
+  pointer-events:none;
+  z-index:200;
+  display:none;
+  min-width:160px;
+  max-width:210px;
+  box-shadow:0 4px 20px rgba(0,0,0,.6);
+}
+#overlay {
+  position:absolute;
+  top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  text-align:center;
+  pointer-events:none;
+  user-select:none;
+}
+#overlay .ov-big { font-family:'Cinzel Decorative',serif; font-size:22px; color:var(--gold); letter-spacing:6px; opacity:.5; }
+#overlay .ov-sm  { font-size:10px; color:var(--textD); margin-top:10px; letter-spacing:3px; }
+/* ─── NATION LIST (empty detail) ─── */
+.nli {
+  display:flex; align-items:center; gap:7px;
+  padding:4px 6px; cursor:pointer;
+  border-radius:2px; transition:background .1s;
+}
+.nli:hover { background:var(--b1); }
+.nl-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+.nl-name { flex:1; font-size:10px; color:var(--text); }
+.nl-sz { font-size:9px; color:var(--textD); }
+/* ─── MAP MODE TOGGLE ─── */
+#map-mode-btns {
+  position:absolute;
+  top:10px; left:50%;
+  transform:translateX(-50%);
+  display:flex; gap:4px;
+  background:rgba(6,10,20,.82);
+  padding:5px 7px;
+  border:1px solid var(--b2);
+  border-radius:3px;
+  backdrop-filter:blur(4px);
+  z-index:5;
+}
+/* ─── TERRAIN LEGEND ─── */
+#terrain-legend {
+  position:absolute;
+  bottom:10px; left:50%;
+  transform:translateX(-50%);
+  display:none;
+  gap:6px;
+  flex-wrap:wrap;
+  justify-content:center;
+  background:rgba(6,10,20,.88);
+  padding:6px 10px;
+  border:1px solid var(--b2);
+  border-radius:3px;
+  backdrop-filter:blur(4px);
+  z-index:5;
+  max-width:460px;
+}
+.tleg-item { display:flex; align-items:center; gap:4px; font-size:9px; color:var(--textD); }
+.tleg-dot  { width:9px; height:9px; border-radius:2px; flex-shrink:0; }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- HEADER -->
+  <header id="hdr">
+    <div id="brand">
+      <div id="brand-title">HISTORIA</div>
+      <div id="brand-sub">架空国家歴史シミュレーター</div>
+    </div>
+    <div id="menu-btns">
+      <button class="btn btn-gold" id="btn-gen">⊕&nbsp;新規生成</button>
+      <button class="btn" id="btn-save">↓&nbsp;セーブ</button>
+      <button class="btn" id="btn-load">↑&nbsp;ロード</button>
+      <input type="file" id="load-file" accept=".json" style="display:none">
+    </div>
+    <div id="time-block">
+      <div id="time-row">
+        <div id="time-display">Year 0</div>
+        <div id="speed-badge">■ 停止中</div>
+      </div>
+      <div id="speed-btns">
+        <button class="btn" data-spd="0.25">×0.25</button>
+        <button class="btn" data-spd="0.5">×0.5</button>
+        <button class="btn btn-pause" id="btn-pause">▶ 再開</button>
+        <button class="btn" data-spd="2">×2</button>
+        <button class="btn" data-spd="4">×4</button>
+        <button class="btn" data-spd="100">×100</button>
+      </div>
+      <div id="speed-bar-row">
+        <span style="font-size:8px;color:var(--textD)">速度</span>
+        <input type="range" id="speed-bar" min="0" max="5" step="1" value="2">
+        <span id="spd-lbl" style="font-size:9px;color:var(--textD);width:36px">×1</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- LEFT PANEL -->
+  <div id="lft">
+    <div class="panel-hdr">
+      <span>国家情報</span>
+      <span id="n-count" style="font-size:8px;color:var(--textD)"></span>
+    </div>
+    <div class="panel-body" id="nd-panel">
+      <div class="empty-st">国家をクリックして<br>詳細を表示</div>
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div id="map-area">
+    <div id="map-wrapper">
+    <canvas id="map-canvas"></canvas>
+    <div id="overlay">
+      <div class="ov-big">HISTORIA</div>
+      <div class="ov-sm">「新規生成」ボタンで世界を創造する</div>
+    </div>
+    </div>
+    <div id="map-mode-btns">
+      <button class="btn active" id="btn-mode-nation" onclick="setMapMode('nation')">🏳 国家</button>
+      <button class="btn"        id="btn-mode-terrain" onclick="setMapMode('terrain')">🗺 地形</button>
+    </div>
+    <div id="terrain-legend">
+      <div class="tleg-item"><div class="tleg-dot" style="background:rgb(100,128,80)"></div>平原</div>
+      <div class="tleg-item"><div class="tleg-dot" style="background:rgb(118,108,70)"></div>丘陵</div>
+      <div class="tleg-item"><div class="tleg-dot" style="background:rgb(110,95,100)"></div>山脈</div>
+      <div class="tleg-item"><div class="tleg-dot" style="background:rgb(60,100,88)"></div>湿地</div>
+      <div class="tleg-item"><div class="tleg-dot" style="background:rgb(192,168,80)"></div>砂漠</div>
+      <div class="tleg-item"><div class="tleg-dot" style="background:rgb(60,92,48)"></div>森林</div>
+      <div class="tleg-item"><div class="tleg-dot" style="background:rgb(44,76,34)"></div>密林</div>
+      <div class="tleg-item"><div class="tleg-dot" style="background:rgb(26,48,80)"></div>海洋</div>
+    </div>
+    <div id="zoom-controls">
+      <button class="btn" onclick="changeZoom(0.2)">＋</button>
+      <button class="btn" onclick="changeZoom(-0.2)">－</button>
+      <button class="btn" onclick="resetZoom()" style="font-size:8px">FIT</button>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div id="rgt">
+    <div class="panel-hdr">
+      <span>歴史年代記</span>
+      <button class="btn" id="btn-clrlog" style="font-size:8px;padding:2px 6px">消去</button>
+    </div>
+    <div id="log-body"></div>
+  </div>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// PERLIN NOISE
+// ═══════════════════════════════════════════════════════════
+class Noise {
+  constructor(seed = 42) {
+    const perm = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) perm[i] = i;
+    let s = seed >>> 0;
+    for (let i = 255; i > 0; i--) {
+      s = Math.imul(s, 1664525) + 1013904223 >>> 0;
+      const j = s % (i + 1);
+      [perm[i], perm[j]] = [perm[j], perm[i]];
+    }
+    this.p = new Uint8Array(512);
+    for (let i = 0; i < 512; i++) this.p[i] = perm[i & 255];
+  }
+  fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+  lerp(a, b, t) { return a + t * (b - a); }
+  grad(h, x, y) {
+    h &= 7;
+    const u = h < 4 ? x : y, v = h < 4 ? y : x;
+    return ((h & 1) ? -u : u) + ((h & 2) ? -v : v);
+  }
+  at(x, y) {
+    const X = Math.floor(x) & 255, Y = Math.floor(y) & 255;
+    x -= Math.floor(x); y -= Math.floor(y);
+    const u = this.fade(x), v = this.fade(y);
+    const a = this.p[X] + Y, b = this.p[X + 1] + Y;
+    return this.lerp(
+      this.lerp(this.grad(this.p[a],     x,   y),   this.grad(this.p[b],     x-1, y),   u),
+      this.lerp(this.grad(this.p[a + 1], x,   y-1), this.grad(this.p[b + 1], x-1, y-1), u),
+      v);
+  }
+  fbm(x, y, oct = 6) {
+    let v = 0, a = 0.5, f = 1, m = 0;
+    for (let i = 0; i < oct; i++) { v += this.at(x*f, y*f)*a; m += a; a *= 0.5; f *= 2; }
+    return v / m;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// NAME GENERATOR
+// ═══════════════════════════════════════════════════════════
+const NG = {
+  pre: ['アル','エル','イン','オル','ウル','カル','テル','ナル','マル','サル',
+        'ランド','ファン','バル','ダル','ガル','セル','レン','ヴァ','ゾル','ブル',
+        'グレ','フレ','ストル','ドレ','ク','シル','ジル','ヒル','ミル','ネ'],
+  mid: ['ド','ト','ン','ル','ス','ク','マ','ナ','ラ','フ',
+        'バ','テ','セ','レ','ア','ガ','ザ','ダ','パ','シ',
+        'ジ','ヒ','ビ','ミ','リ','デ','ベ','メ','ロ','ノ'],
+  suf: ['ア','ィア','ーン','リア','ナ','ルス','スト','ムル','リス','ダン',
+        'カン','ラン','フォン','グ','ーク','ーグ','ォン','エン','イン','オン',
+        'ニア','ディア','ルナ','ース','ート','イト','オルド','アルド','エルド','ウルド'],
+  used: new Set(),
+  gen() {
+    for (let i = 0; i < 120; i++) {
+      const p = pick(this.pre);
+      const m = Math.random() > 0.35 ? pick(this.mid) : '';
+      const s = pick(this.suf);
+      const n = p + m + s;
+      if (!this.used.has(n)) { this.used.add(n); return n + '国'; }
+    }
+    return '国' + (this.used.size + 1);
+  },
+  reset() { this.used.clear(); }
+};
+
+// ═══════════════════════════════════════════════════════════
+// TERRAIN DEFINITIONS
+// ═══════════════════════════════════════════════════════════
+const T = {
+  OCEAN:    { id:'O', name:'海洋',   color:[26,48,80],   def:0,   ext:-999 },
+  PLAINS:   { id:'P', name:'平原',   color:[100,128,80], def:0,   ext:0    },
+  HILLS:    { id:'H', name:'丘陵',   color:[118,108,70], def:20,  ext:-8   },
+  MOUNTAINS:{ id:'M', name:'山脈',   color:[110,95,100], def:55,  ext:-35  },
+  WETLANDS: { id:'W', name:'湿地',   color:[60,100,88],  def:10,  ext:-12  },
+  DESERT:   { id:'D', name:'砂漠',   color:[192,168,80], def:-10, ext:-18  },
+  FOREST:   { id:'F', name:'森林',   color:[60,92,48],   def:28,  ext:-6   },
+  JUNGLE:   { id:'J', name:'密林',   color:[44,76,34],   def:40,  ext:-22  },
+};
+const T_ID = {}; for (const v of Object.values(T)) T_ID[v.id] = v;
+
+// ═══════════════════════════════════════════════════════════
+// NATIONAL SPIRITS
+// ═══════════════════════════════════════════════════════════
+const SPIRITS = [
+  { name:'帝国主義',   desc:'領土拡張を至上とする思想',       buffs:[{l:'膨張力',s:'exp',v:+25},{l:'攻撃力',s:'atk',v:+20},{l:'安定度',s:'stb',v:-20},{l:'内乱',s:'reb',v:+10}] },
+  { name:'商業共和',   desc:'貿易と経済を重視する体制',       buffs:[{l:'経済力',s:'eco',v:+30},{l:'安定度',s:'stb',v:+10},{l:'膨張力',s:'exp',v:-10}] },
+  { name:'封建制度',   desc:'主従関係による統治',             buffs:[{l:'防衛力',s:'def',v:+20},{l:'安定度',s:'stb',v:+10},{l:'膨張力',s:'exp',v:-15},{l:'経済力',s:'eco',v:-10}] },
+  { name:'神権政治',   desc:'宗教的権威による支配',           buffs:[{l:'安定度',s:'stb',v:+30},{l:'内乱',s:'reb',v:-25},{l:'膨張力',s:'exp',v:-12}] },
+  { name:'遊牧帝国',   desc:'騎馬民族の機動戦',               buffs:[{l:'攻撃力',s:'atk',v:+30},{l:'膨張力',s:'exp',v:+25},{l:'安定度',s:'stb',v:-30},{l:'防衛力',s:'def',v:-10}] },
+  { name:'武士道',     desc:'戦士の名誉と忠義',               buffs:[{l:'攻撃力',s:'atk',v:+25},{l:'防衛力',s:'def',v:+25},{l:'経済力',s:'eco',v:-15},{l:'内乱',s:'reb',v:-15}] },
+  { name:'海洋覇権',   desc:'海を支配する海軍国家',           buffs:[{l:'膨張力',s:'exp',v:+20},{l:'経済力',s:'eco',v:+25},{l:'防衛力',s:'def',v:-10}] },
+  { name:'民族主義',   desc:'民族の団結と誇り',               buffs:[{l:'安定度',s:'stb',v:+20},{l:'防衛力',s:'def',v:+15},{l:'攻撃力',s:'atk',v:-10}] },
+  { name:'奴隷経済',   desc:'人力による急速な発展',           buffs:[{l:'経済力',s:'eco',v:+30},{l:'膨張力',s:'exp',v:+10},{l:'内乱',s:'reb',v:+35},{l:'安定度',s:'stb',v:-20}] },
+  { name:'魔法帝国',   desc:'神秘の力で支配する',             buffs:[{l:'攻撃力',s:'atk',v:+20},{l:'防衛力',s:'def',v:+20},{l:'膨張力',s:'exp',v:+10},{l:'内乱',s:'reb',v:+10},{l:'経済力',s:'eco',v:-10}] },
+  { name:'共和革命',   desc:'自由と平等の新体制',             buffs:[{l:'安定度',s:'stb',v:-15},{l:'攻撃力',s:'atk',v:+15},{l:'膨張力',s:'exp',v:+15},{l:'内乱',s:'reb',v:+12}] },
+  { name:'古代文明',   desc:'栄光ある伝統と文化',             buffs:[{l:'安定度',s:'stb',v:+15},{l:'経済力',s:'eco',v:+20},{l:'膨張力',s:'exp',v:-15},{l:'防衛力',s:'def',v:+10}] },
+  { name:'護法聖国',   desc:'純粋な防衛と保護',               buffs:[{l:'防衛力',s:'def',v:+35},{l:'安定度',s:'stb',v:+20},{l:'攻撃力',s:'atk',v:-25},{l:'膨張力',s:'exp',v:-20}] },
+  { name:'開拓植民',   desc:'新大陸を求めて広がる',           buffs:[{l:'膨張力',s:'exp',v:+30},{l:'経済力',s:'eco',v:+10},{l:'防衛力',s:'def',v:-15},{l:'内乱',s:'reb',v:+8}] },
+  { name:'暗黒帝国',   desc:'恐怖と威圧による統治',           buffs:[{l:'攻撃力',s:'atk',v:+35},{l:'内乱',s:'reb',v:+20},{l:'安定度',s:'stb',v:-25},{l:'膨張力',s:'exp',v:+15}] },
+  { name:'大国',       desc:'軍事・経済・安定を兼ね備えた覇権国家', buffs:[{l:'攻撃力',s:'atk',v:+20},{l:'防衛力',s:'def',v:+20},{l:'経済力',s:'eco',v:+25},{l:'安定度',s:'stb',v:+20},{l:'膨張力',s:'exp',v:+10}] },
+];
+
+// ═══════════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════════
+const GW = 240, GH = 155, CS = 5;
+const SEA  = 0.38;
+const INIT_N = 22;
+const WAR_BASE = 0.0010;
+const PEACE_MIN = 90;
+const WHITE_PEACE_TICKS = 200;
+const REBEL_THRESH = 82;          // higher → harder to trigger
+const REBEL_RATE = 0.00090;       // much lower base probability
+const RG_GROWTH = 0.048;          // slower accumulation
+const MIN_SIZE_FOR_REBEL = 18;    // need larger nation before revolt
+
+// ═══════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════
+let G = { grid:null, nations:new Map(), tick:0, year:0, nid:1, sel:null };
+let mapMode = 'nation'; // 'nation' | 'terrain'
+const LOG = [];
+const LOG_MAX = 250;
+
+// ═══════════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════════
+function rnd(a,b){ return a+Math.random()*(b-a); }
+function ri(a,b) { return Math.floor(rnd(a,b+1)); }
+function pick(a) { return a[Math.floor(Math.random()*a.length)]; }
+function clamp(v,lo,hi){ return v<lo?lo:v>hi?hi:v; }
+
+function hslHex(h,s,l){
+  h/=360; s/=100; l/=100;
+  const h2r=(p,q,t)=>{
+    if(t<0)t+=1; if(t>1)t-=1;
+    if(t<1/6)return p+(q-p)*6*t;
+    if(t<1/2)return q;
+    if(t<2/3)return p+(q-p)*(2/3-t)*6;
+    return p;
+  };
+  let r,g,b;
+  if(s===0){r=g=b=l;}
+  else{const q=l<.5?l*(1+s):l+s-l*s,p=2*l-q;r=h2r(p,q,h+1/3);g=h2r(p,q,h);b=h2r(p,q,h-1/3);}
+  return '#'+[r,g,b].map(x=>Math.round(x*255).toString(16).padStart(2,'0')).join('');
+}
+
+function hexRGB(hex) {
+  return [parseInt(hex.slice(1,3),16),parseInt(hex.slice(3,5),16),parseInt(hex.slice(5,7),16)];
+}
+
+function neighbors4(x,y){
+  return [[x+1,y],[x-1,y],[x,y+1],[x,y-1]]
+    .filter(([nx,ny])=>nx>=0&&nx<GW&&ny>=0&&ny<GH);
+}
+function neighbors8(x,y){
+  const r=[];
+  for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+    if(dx===0&&dy===0)continue;
+    const nx=x+dx,ny=y+dy;
+    if(nx>=0&&nx<GW&&ny>=0&&ny<GH)r.push([nx,ny]);
+  }
+  return r;
+}
+
+// ═══════════════════════════════════════════════════════════
+// MAP GENERATION
+// ═══════════════════════════════════════════════════════════
+function makeMap(seed){
+  const n1=new Noise(seed), n2=new Noise(seed+999), n3=new Noise(seed+1999);
+  const grid=[];
+  for(let y=0;y<GH;y++){
+    grid[y]=[];
+    for(let x=0;x<GW;x++){
+      const nx=x/GW*4.2, ny=y/GH*4.2;
+      const ex=Math.abs(x/GW-.5)*2.1, ey=Math.abs(y/GH-.5)*2.1;
+      const edgeFade=Math.pow(Math.max(ex,ey),1.8)*0.55;
+      const h=(n1.fbm(nx,ny,7)+1)*.5-edgeFade;
+      const hum=(n2.fbm(nx*1.4,ny*1.4,4)+1)*.5;
+      const t2=(n3.fbm(nx*.8+5,ny*.8+5,3)+1)*.5;
+      let ter;
+      if(h<SEA)              ter=T.OCEAN;
+      else if(h<SEA+.06){    ter=hum>.65?T.WETLANDS:T.PLAINS; }
+      else if(h<.52){
+        if(hum<.28)          ter=T.DESERT;
+        else if(hum>.72)     ter=T.WETLANDS;
+        else                 ter=T.PLAINS;
+      }else if(h<.68){
+        if(hum>.68)          ter=T.FOREST;
+        else if(hum>.40)     ter=T.HILLS;
+        else                 ter=T.DESERT;
+      }else if(h<.82){
+        if(hum>.55)          ter=T.JUNGLE;
+        else if(hum>.30)     ter=T.FOREST;
+        else                 ter=T.HILLS;
+      }else                  ter=T.MOUNTAINS;
+      grid[y][x]={ter, own:null, cap:false, wz:false};
+    }
+  }
+  return grid;
+}
+
+// ═══════════════════════════════════════════════════════════
+// NATION CREATION
+// ═══════════════════════════════════════════════════════════
+function makeStats(spirit){
+  const base={exp:50,atk:50,def:50,stb:50,eco:50,reb:0};
+  for(const b of spirit.buffs){if(base.hasOwnProperty(b.s))base[b.s]=clamp(base[b.s]+b.v,5,100);}
+  return base;
+}
+
+function placeNations(grid,count){
+  const nations=new Map();
+  const land=[];
+  for(let y=0;y<GH;y++)for(let x=0;x<GW;x++)if(grid[y][x].ter!==T.OCEAN)land.push([x,y]);
+  const caps=[];
+  const minD=10;
+  for(let att=0;att<count*40&&nations.size<count;att++){
+    const [x,y]=pick(land);
+    if(grid[y][x].ter===T.MOUNTAINS)continue;
+    let near=false;
+    for(const[cx,cy]of caps)if(Math.hypot(x-cx,y-cy)<minD){near=true;break;}
+    if(near)continue;
+    const id=G.nid++;
+    const hue=(id*137.508)%360;
+    const color=hslHex(hue,60+ri(0,20),45+ri(0,15));
+    const spirit=pick(SPIRITS);
+    const stats=makeStats(spirit);
+    const nation={
+      id, name:NG.gen(), color, spirit, stats,
+      capital:{x,y},
+      capHistory:[{x,y,yr:0}],
+      terr:new Set([`${x},${y}`]),
+      rgauge:rnd(5,15),
+      age:0, alive:true,
+      wars:new Set(),       // enemy nation ids
+      peaceCd:new Map(),    // id→ticks of peace
+      warTicks:new Map(),   // id→ticks at war
+      suzerain:null,
+      vassals:new Set(),
+    };
+    grid[y][x].own=id; grid[y][x].cap=true;
+    caps.push([x,y]);
+    nations.set(id,nation);
+  }
+  return nations;
+}
+
+// ═══════════════════════════════════════════════════════════
+// LOG
+// ═══════════════════════════════════════════════════════════
+function log(txt,type=''){
+  LOG.unshift({txt,type,yr:G.year});
+  if(LOG.length>LOG_MAX)LOG.pop();
+  renderLog();
+}
+
+// ═══════════════════════════════════════════════════════════
+// SIMULATION STEP
+// ═══════════════════════════════════════════════════════════
+function step(){
+  G.tick++;
+  G.year=Math.floor(G.tick*0.75);
+  const alive=[...G.nations.values()].filter(n=>n.alive);
+  if(!alive.length)return;
+
+  // Shuffle
+  alive.sort(()=>Math.random()-.5);
+
+  for(const n of alive){
+    if(!n.alive)continue;
+    n.age++;
+
+    // Rebellion gauge
+    const rgMod=1+(n.stats.reb||0)/100;
+    const stbMod=n.stats.stb/1000;
+    n.rgauge=clamp(n.rgauge+RG_GROWTH*rgMod-stbMod,0,100);
+
+    // Expand
+    if(Math.random()<.40)expand(n);
+
+    // War
+    if(n.wars.size===0){
+      if(Math.random()<.5)tryWar(n,alive);
+    } else {
+      conductWar(n);
+    }
+
+    // White peace check
+    for(const[fid,ticks]of n.warTicks){
+      if(ticks>WHITE_PEACE_TICKS){
+        const foe=G.nations.get(fid);
+        if(foe&&foe.alive){
+          endWar(n,foe,'white');
+        }
+      } else {
+        n.warTicks.set(fid,ticks+1);
+      }
+    }
+
+    // Peace cooldown
+    for(const[fid,t]of n.peaceCd) n.peaceCd.set(fid,t+1);
+
+    // Rebellion
+    if(n.rgauge>REBEL_THRESH){
+      const p=REBEL_RATE*Math.pow((n.rgauge-REBEL_THRESH)/(100-REBEL_THRESH),2);
+      if(Math.random()<p&&n.terr.size>MIN_SIZE_FOR_REBEL)rebel(n);
+    }
+  }
+
+  clearWarZones();
+  renderMap();
+  updateUI();
+}
+
+function findOverseas(sx,sy,nid,maxSea){
+  // BFS across ocean tiles, return reachable unclaimed land on the other side
+  const result=[];
+  const visited=new Set([`${sx},${sy}`]);
+  // queue: [x, y, seaSteps, crossedOcean]
+  const queue=[[sx,sy,0,false]];
+  while(queue.length&&result.length<6){
+    const[x,y,sea,co]=queue.shift();
+    for(const[nx,ny]of neighbors4(x,y)){
+      const k=`${nx},${ny}`;
+      if(visited.has(k))continue;
+      visited.add(k);
+      const c=G.grid[ny][nx];
+      if(c.ter===T.OCEAN){
+        if(sea<maxSea)queue.push([nx,ny,sea+1,true]);
+      } else if(co){
+        // Reached land after crossing ocean
+        if(c.own===null&&c.ter!==T.MOUNTAINS)result.push([nx,ny]);
+      }
+    }
+  }
+  return result;
+}
+
+function expand(n){
+  const neutralCands=[];   // unclaimed land (high priority)
+  const seaCands=[];       // overseas unclaimed land (low priority)
+
+  for(const key of n.terr){
+    const[x,y]=key.split(',').map(Number);
+
+    // Land neighbors
+    for(const[nx,ny]of neighbors4(x,y)){
+      const c=G.grid[ny][nx];
+      if(c.own===null&&c.ter!==T.OCEAN){
+        const sc=n.stats.exp+c.ter.ext;
+        if(sc>5)neutralCands.push([nx,ny,sc]);
+      }
+    }
+
+    // Overseas (attempted rarely per tile for performance)
+    if(Math.random()<0.06){
+      const ov=findOverseas(x,y,n.id,4);
+      for(const [ox,oy] of ov)seaCands.push([ox,oy,10]);
+    }
+  }
+
+  if(neutralCands.length){
+    // Pick from top candidates weighted by score
+    neutralCands.sort((a,b)=>b[2]-a[2]);
+    const pool=neutralCands.slice(0,Math.max(3,Math.floor(neutralCands.length*.3)));
+    const[tx,ty]=pick(pool);
+    G.grid[ty][tx].own=n.id;
+    n.terr.add(`${tx},${ty}`);
+  } else if(seaCands.length&&Math.random()<0.12){
+    // Overseas expansion — low probability, needs exp stat
+    const seaChance=(n.stats.exp-30)/180; // exp 50 → ~11%, 80 → ~28%
+    if(Math.random()<seaChance){
+      const[tx,ty]=pick(seaCands);
+      G.grid[ty][tx].own=n.id;
+      n.terr.add(`${tx},${ty}`);
+    }
+  }
+}
+
+function tryWar(n,all){
+  // If neutral land still nearby, be much less eager to fight
+  let hasNeutralLand=false;
+  outer: for(const key of n.terr){
+    const[x,y]=key.split(',').map(Number);
+    for(const[nx,ny]of neighbors4(x,y)){
+      const c=G.grid[ny][nx];
+      if(c.own===null&&c.ter!==T.OCEAN){hasNeutralLand=true;break outer;}
+    }
+  }
+  const warMult=hasNeutralLand?0.18:1.0;
+
+  const adj=new Map();
+  for(const key of n.terr){
+    const[x,y]=key.split(',').map(Number);
+    for(const[nx,ny]of neighbors4(x,y)){
+      const fid=G.grid[ny][nx].own;
+      if(fid!==null&&fid!==n.id){
+        const foe=G.nations.get(fid);
+        if(foe&&foe.alive&&!n.wars.has(fid)){
+          const pc=n.peaceCd.get(fid)||999;
+          if(pc>=PEACE_MIN)adj.set(fid,(adj.get(fid)||0)+1);
+        }
+      }
+    }
+  }
+  for(const[fid,blen]of adj){
+    const foe=G.nations.get(fid);
+    const baseChance=WAR_BASE*warMult*(1+n.stats.atk/100)*Math.sqrt(blen);
+    if(Math.random()<baseChance){
+      declareWar(n,foe);
+      break;
+    }
+  }
+}
+
+function declareWar(a,d){
+  if(!a||!d||!a.alive||!d.alive)return;
+  a.wars.add(d.id); d.wars.add(a.id);
+  a.warTicks.set(d.id,0); d.warTicks.set(a.id,0);
+  log(`⚔ ${a.name} が ${d.name} に宣戦布告！`,'war');
+}
+
+function conductWar(n){
+  for(const fid of n.wars){
+    const foe=G.nations.get(fid);
+    if(!foe||!foe.alive){n.wars.delete(fid);n.warTicks.delete(fid);continue;}
+    // Find attackable tiles
+    const atk=[];
+    for(const key of n.terr){
+      const[x,y]=key.split(',').map(Number);
+      for(const[nx,ny]of neighbors8(x,y)){
+        if(G.grid[ny][nx].own===fid)atk.push([nx,ny]);
+      }
+    }
+    if(!atk.length)continue;
+    const[tx,ty]=pick(atk);
+    const cell=G.grid[ty][tx];
+    const tdef=cell.ter.def;
+    const ap=n.stats.atk*(0.65+Math.random()*.7);
+    const dp=foe.stats.def*(0.65+Math.random()*.7)+tdef*.5;
+    if(ap>dp){
+      const key=`${tx},${ty}`;
+      foe.terr.delete(key);
+      cell.own=n.id; cell.wz=true;
+      n.terr.add(key);
+      if(cell.cap){
+        cell.cap=false;
+        if(!relocateCap(foe,n))defeatNation(foe,n);
+      }
+    }
+  }
+}
+
+function relocateCap(n,captor){
+  let best=null,bd=-1;
+  for(const key of n.terr){
+    const[x,y]=key.split(',').map(Number);
+    if(G.grid[y][x].ter===T.OCEAN||G.grid[y][x].ter===T.MOUNTAINS)continue;
+    const d=Math.hypot(x-captor.capital.x,y-captor.capital.y);
+    if(d>bd){bd=d;best=[x,y];}
+  }
+  if(!best)return false;
+  const[nx,ny]=best;
+  n.capital={x:nx,y:ny};
+  n.capHistory.push({x:nx,y:ny,yr:G.year});
+  G.grid[ny][nx].cap=true;
+  log(`🏰 ${n.name} が首都を遷都 → [${nx},${ny}]`,'war');
+  return true;
+}
+
+function defeatNation(loser,winner){
+  log(`💀 ${winner.name} が ${loser.name} を征服！`,'fall');
+  loser.alive=false;
+  endWar(loser,winner,'defeat');
+
+  const roll=Math.random();
+  if(roll<.5){
+    // Annex
+    for(const key of loser.terr){
+      const[x,y]=key.split(',').map(Number);
+      G.grid[y][x].own=winner.id; G.grid[y][x].cap=false;
+      winner.terr.add(key);
+    }
+    loser.terr.clear();
+    log(`📜 ${winner.name} が ${loser.name} を併合`,'fall');
+  } else if(roll<.72){
+    // Puppet
+    loser.suzerain=winner.id; winner.vassals.add(loser.id);
+    loser.alive=true; // puppet is still alive
+    log(`🎭 ${loser.name} は ${winner.name} の傀儡国家となった`,'fall');
+  } else {
+    // Liberation → split
+    log(`🌟 ${loser.name} 解放！各地に独立国誕生`,'found');
+    const cells=[...loser.terr];
+    const half=Math.floor(cells.length*.5);
+    const p1=new Set(cells.slice(0,half)), p2=new Set(cells.slice(half));
+    if(p1.size>3){const n=spawnNation(p1,loser);G.nations.set(n.id,n);}
+    if(p2.size>3){const n=spawnNation(p2,loser);G.nations.set(n.id,n);}
+    loser.terr.clear();
+    loser.alive=false;
+  }
+}
+
+function endWar(a,b,reason){
+  a.wars.delete(b.id); b.wars.delete(a.id);
+  a.warTicks.delete(b.id); b.warTicks.delete(a.id);
+  a.peaceCd.set(b.id,0); b.peaceCd.set(a.id,0);
+  if(reason==='white')log(`🕊 ${a.name} と ${b.name} が和平締結`,'peace');
+}
+
+function spawnNation(terr,parent){
+  const id=G.nid++;
+  const hue=(id*137.508)%360;
+  const color=hslHex(hue,58+ri(0,20),44+ri(0,16));
+  const spirit=pick(SPIRITS);
+  const stats=makeStats(spirit);
+  let best=null,bestS=-1;
+  for(const key of terr){
+    const[x,y]=key.split(',').map(Number);
+    const c=G.grid[y][x];
+    if(c.ter===T.OCEAN||c.ter===T.MOUNTAINS)continue;
+    const score=(1-Math.abs(x/GW-.5))*(1-Math.abs(y/GH-.5));
+    if(score>bestS){bestS=score;best=[x,y];}
+  }
+  if(!best){best=[...terr][0].split(',').map(Number);}
+  const[cx,cy]=best;
+  for(const key of terr){
+    const[x,y]=key.split(',').map(Number);
+    G.grid[y][x].own=id; G.grid[y][x].cap=false;
+  }
+  G.grid[cy][cx].cap=true;
+  const n={
+    id, name:NG.gen(), color, spirit, stats,
+    capital:{x:cx,y:cy}, capHistory:[{x:cx,y:cy,yr:G.year}],
+    terr, rgauge:rnd(15,35), age:0, alive:true,
+    wars:new Set(), peaceCd:new Map(), warTicks:new Map(),
+    suzerain:null, vassals:new Set(),
+  };
+  log(`🏳 ${n.name} 建国 [${n.spirit.name}]`,'found');
+  return n;
+}
+
+function rebel(n){
+  if(n.terr.size<12)return;
+  log(`🔥 ${n.name} で内乱発生！`,'rebel');
+  const cells=[...n.terr];
+  cells.sort((a,b)=>{
+    const[ax,ay]=a.split(',').map(Number);
+    const[bx,by]=b.split(',').map(Number);
+    return Math.hypot(bx-n.capital.x,by-n.capital.y)
+          -Math.hypot(ax-n.capital.x,ay-n.capital.y);
+  });
+  const sz=Math.floor(cells.length*rnd(.22,.44));
+  const chunk=new Set(cells.slice(0,sz));
+  for(const key of chunk)n.terr.delete(key);
+  const rn=spawnNation(chunk,n);
+  G.nations.set(rn.id,rn);
+  n.rgauge=Math.max(0,n.rgauge-38);
+  if(Math.random()<.65)declareWar(rn,n);
+}
+
+function clearWarZones(){
+  for(let y=0;y<GH;y++)for(let x=0;x<GW;x++)G.grid[y][x].wz=false;
+}
+
+// ═══════════════════════════════════════════════════════════
+// RENDERING
+// ═══════════════════════════════════════════════════════════
+const cvs=document.getElementById('map-canvas');
+const ctx=cvs.getContext('2d');
+cvs.width=GW*CS; cvs.height=GH*CS;
+
+// Pre-parse nation colors cache
+const nColorCache=new Map();
+function getNRGB(n){
+  if(!nColorCache.has(n.id)) nColorCache.set(n.id,hexRGB(n.color));
+  return nColorCache.get(n.id);
+}
+
+function renderMap(){
+  if(!G.grid)return;
+  const img=ctx.createImageData(cvs.width,cvs.height);
+  const d=img.data;
+  const isNation=mapMode==='nation';
+
+  for(let y=0;y<GH;y++){
+    for(let x=0;x<GW;x++){
+      const cell=G.grid[y][x];
+      let[r,g,b]=cell.ter.color;
+
+      if(isNation&&cell.own!==null){
+        const n=G.nations.get(cell.own);
+        if(n){
+          const[nr,ng,nb]=getNRGB(n);
+          // Blend: terrain tint + nation color
+          const t=cell.ter===T.OCEAN?0:.42;
+          r=Math.round(r+(nr-r)*t);
+          g=Math.round(g+(ng-g)*t);
+          b=Math.round(b+(nb-b)*t);
+          if(G.sel===cell.own){r=Math.min(255,r+32);g=Math.min(255,g+32);b=Math.min(255,b+32);}
+          if(n.suzerain!==null){r=Math.round(r*.82+22);g=Math.round(g*.82+14);b=Math.round(b*.82+28);}
+        }
+      } else if(!isNation){
+        // Terrain mode: show pure terrain, slightly brighten owned land
+        if(cell.own!==null&&cell.ter!==T.OCEAN){
+          r=Math.min(255,r+10); g=Math.min(255,g+10); b=Math.min(255,b+10);
+        }
+      }
+
+      if(isNation&&cell.wz){r=Math.min(255,r+30);g=Math.max(0,g-16);b=Math.max(0,b-16);}
+
+      for(let py=0;py<CS;py++){
+        for(let px=0;px<CS;px++){
+          const i=((y*CS+py)*cvs.width+(x*CS+px))*4;
+          d[i]=r; d[i+1]=g; d[i+2]=b; d[i+3]=255;
+        }
+      }
+    }
+  }
+  ctx.putImageData(img,0,0);
+
+  if(isNation){
+    drawBorders();
+    drawCaps();
+  } else {
+    drawTerrainBorders();
+    drawCaps();
+  }
+}
+
+function drawBorders(){
+  for(let y=0;y<GH;y++){
+    for(let x=0;x<GW;x++){
+      const c=G.grid[y][x];
+      if(c.own===null)continue;
+      const n=G.nations.get(c.own);
+      if(!n)continue;
+      const px=x*CS,py=y*CS;
+      const isSel=G.sel===c.own;
+      ctx.strokeStyle=isSel?n.color+'ee':n.color+'88';
+      ctx.lineWidth=isSel?1.5:0.8;
+      if(x+1<GW&&G.grid[y][x+1].own!==c.own){
+        ctx.beginPath();ctx.moveTo(px+CS,py);ctx.lineTo(px+CS,py+CS);ctx.stroke();
+      }
+      if(y+1<GH&&G.grid[y+1][x].own!==c.own){
+        ctx.beginPath();ctx.moveTo(px,py+CS);ctx.lineTo(px+CS,py+CS);ctx.stroke();
+      }
+    }
+  }
+}
+
+function drawCaps(){
+  for(const n of G.nations.values()){
+    if(!n.alive&&n.suzerain===null)continue;
+    if(!n.capital)continue;
+    const px=n.capital.x*CS+CS/2, py=n.capital.y*CS+CS/2;
+    ctx.fillStyle='#ffffff';
+    ctx.strokeStyle='#000000';
+    ctx.lineWidth=1;
+    ctx.beginPath();ctx.arc(px,py,3,0,Math.PI*2);ctx.fill();ctx.stroke();
+    if(G.sel===n.id){
+      ctx.strokeStyle=n.color;
+      ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.arc(px,py,5.5,0,Math.PI*2);ctx.stroke();
+    }
+  }
+}
+
+function drawTerrainBorders(){
+  // In terrain mode, draw thin borders between different terrain types
+  ctx.strokeStyle='rgba(0,0,0,0.25)';
+  ctx.lineWidth=0.5;
+  for(let y=0;y<GH;y++){
+    for(let x=0;x<GW;x++){
+      const c=G.grid[y][x];
+      const px=x*CS,py=y*CS;
+      if(x+1<GW&&G.grid[y][x+1].ter!==c.ter){
+        ctx.beginPath();ctx.moveTo(px+CS,py);ctx.lineTo(px+CS,py+CS);ctx.stroke();
+      }
+      if(y+1<GH&&G.grid[y+1][x].ter!==c.ter){
+        ctx.beginPath();ctx.moveTo(px,py+CS);ctx.lineTo(px+CS,py+CS);ctx.stroke();
+      }
+    }
+  }
+}
+
+function setMapMode(mode){
+  mapMode=mode;
+  document.getElementById('btn-mode-nation').classList.toggle('active',mode==='nation');
+  document.getElementById('btn-mode-terrain').classList.toggle('active',mode==='terrain');
+  const leg=document.getElementById('terrain-legend');
+  leg.style.display=mode==='terrain'?'flex':'none';
+  renderMap();
+}
+
+// ═══════════════════════════════════════════════════════════
+// TOOLTIP
+// ═══════════════════════════════════════════════════════════
+const tip=document.getElementById('tooltip');
+cvs.addEventListener('mousemove',e=>{
+  if(!G.grid){tip.style.display='none';return;}
+  const r=cvs.getBoundingClientRect();
+  const cx=Math.floor((e.clientX-r.left)/(CS*zoomLevel)), cy=Math.floor((e.clientY-r.top)/(CS*zoomLevel));
+  if(cx<0||cx>=GW||cy<0||cy>=GH){tip.style.display='none';return;}
+  const cell=G.grid[cy][cx];
+  let h=`<div style="color:var(--textD);font-size:8px">[${cx},${cy}]</div>`;
+  h+=`<div style="color:var(--gold);margin:2px 0;font-size:10px">${cell.ter.name}</div>`;
+  if(cell.own!==null){
+    const n=G.nations.get(cell.own);
+    if(n){
+      h+=`<div style="color:${n.color};font-family:'Cinzel',serif;font-size:12px;margin-top:4px">${n.name}</div>`;
+      h+=`<div style="color:var(--textD);font-size:9px;margin-top:2px">精神: ${n.spirit.name}</div>`;
+      const status=!n.alive?'<span style="color:var(--red)">滅亡</span>'
+        :n.suzerain?`<span style="color:var(--warn)">傀儡</span>`
+        :'<span style="color:var(--green)">独立</span>';
+      h+=`<div style="font-size:9px;margin-top:3px">領土:${n.terr.size} | 内乱:${n.rgauge.toFixed(0)}% | ${status}</div>`;
+      if(n.wars.size>0){
+        const foes=[...n.wars].map(id=>G.nations.get(id)?.name).filter(Boolean).join(', ');
+        h+=`<div style="color:var(--red);font-size:9px;margin-top:2px">⚔ ${foes}</div>`;
+      }
+    }
+  }
+  if(cell.cap)h+=`<div style="color:#ffe;font-size:9px;margin-top:2px">★ 首都</div>`;
+  tip.innerHTML=h;
+  tip.style.display='block';
+  tip.style.left=(e.clientX+16)+'px';
+  tip.style.top=(e.clientY-10)+'px';
+});
+cvs.addEventListener('mouseleave',()=>tip.style.display='none');
+cvs.addEventListener('click',e=>{
+  if(!G.grid)return;
+  const r=cvs.getBoundingClientRect();
+  const cx=Math.floor((e.clientX-r.left)/(CS*zoomLevel)), cy=Math.floor((e.clientY-r.top)/(CS*zoomLevel));
+  if(cx<0||cx>=GW||cy<0||cy>=GH)return;
+  const own=G.grid[cy][cx].own;
+  G.sel=own;
+  renderNationDetail(own!==null?G.nations.get(own):null);
+  renderMap();
+});
+
+// ═══════════════════════════════════════════════════════════
+// NATION DETAIL
+// ═══════════════════════════════════════════════════════════
+function renderNationDetail(n){
+  const p=document.getElementById('nd-panel');
+  if(!n){
+    // Show nation list
+    const alive=[...G.nations.values()].filter(v=>v.alive||v.suzerain!==null);
+    if(!alive.length){p.innerHTML='<div class="empty-st">国家をクリックして<br>詳細を表示</div>';return;}
+    let h='<div style="margin-bottom:6px;color:var(--textD);font-size:9px;letter-spacing:2px">ACTIVE NATIONS</div>';
+    for(const an of alive.sort((a,b)=>b.terr.size-a.terr.size)){
+      const statusDot=an.wars.size>0?'var(--red)':an.suzerain?'var(--warn)':'var(--green)';
+      h+=`<div class="nli" onclick="selectNation(${an.id})">
+        <div class="nl-dot" style="background:${an.color};box-shadow:0 0 4px ${an.color}66"></div>
+        <div class="nl-name">${an.name}</div>
+        <div class="nl-sz">${an.terr.size}t</div>
+        <div style="width:6px;height:6px;border-radius:50%;background:${statusDot};flex-shrink:0"></div>
+      </div>`;
+    }
+    p.innerHTML=h; return;
+  }
+  const sc=!n.alive?'var(--red)':n.suzerain?'var(--warn)':'var(--green)';
+  const st=!n.alive?'滅亡':n.suzerain?`傀儡 (${G.nations.get(n.suzerain)?.name||'?'})`:'独立国';
+  let h=`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <div style="width:13px;height:13px;background:${n.color};border-radius:50%;box-shadow:0 0 6px ${n.color}66;flex-shrink:0"></div>
+      <div class="nd-name">${n.name}</div>
+    </div>
+    <div class="nd-bar" style="background:${n.color}"></div>
+    <div class="srow"><span class="slbl">ステータス</span><span style="color:${sc};font-size:9.5px">${st}</span></div>
+    <div class="srow"><span class="slbl">建国年</span><span class="sval">${Math.max(1,G.year-Math.floor(n.age*.75))} 年</span></div>
+    <div class="srow"><span class="slbl">領土</span><span class="sval">${n.terr.size} タイル</span></div>
+    <div class="srow"><span class="slbl">首都座標</span><span class="sval">[${n.capital.x},${n.capital.y}]</span></div>
+    <div class="srow"><span class="slbl">属国数</span><span class="sval">${n.vassals.size}</span></div>`;
+
+  h+=`<div class="sec-title">国家精神</div>
+    <div style="color:var(--blue);font-size:11px;margin-bottom:4px">${n.spirit.name}</div>
+    <div style="color:var(--textD);font-size:9px;margin-bottom:6px">${n.spirit.desc}</div>`;
+  for(const b of n.spirit.buffs){
+    const vc=b.v>0?'var(--green)':'var(--red)';
+    const sg=b.v>0?'+':'';
+    h+=`<div style="font-size:9px;color:${vc};padding:1px 0">${b.l} ${sg}${b.v}</div>`;
+  }
+
+  h+=`<div class="sec-title">ステータス詳細</div>`;
+  const stats=[
+    {k:'exp',l:'膨張力',c:'#4a90d8'},{k:'atk',l:'攻撃力',c:'#d05858'},
+    {k:'def',l:'防衛力',c:'#50c888'},{k:'stb',l:'安定度',c:'#c8a84b'},
+    {k:'eco',l:'経済力',c:'#c878d0'},
+  ];
+  for(const sd of stats){
+    const v=n.stats[sd.k];
+    h+=`<div class="srow"><span class="slbl">${sd.l}</span>
+      <div style="display:flex;align-items:center;gap:5px">
+        <div class="sbar-wrap"><div class="sbar" style="width:${v}%;background:${sd.c}"></div></div>
+        <span class="sval">${v}</span></div></div>`;
+  }
+  const rgc=n.rgauge>70?'var(--red)':n.rgauge>45?'var(--warn)':'var(--green)';
+  h+=`<div class="srow"><span class="slbl">内乱ゲージ</span>
+    <div style="display:flex;align-items:center;gap:5px">
+      <div class="sbar-wrap"><div class="sbar" style="width:${n.rgauge}%;background:${rgc}"></div></div>
+      <span class="sval" style="color:${rgc}">${n.rgauge.toFixed(0)}</span>
+    </div></div>`;
+
+  if(n.wars.size>0){
+    h+=`<div class="sec-title">交戦中</div>`;
+    for(const fid of n.wars){
+      const f=G.nations.get(fid);
+      if(f)h+=`<div style="color:var(--red);font-size:9.5px;padding:2px 0">⚔ ${f.name}</div>`;
+    }
+  }
+  if(n.vassals.size>0){
+    h+=`<div class="sec-title">属国</div>`;
+    for(const vid of n.vassals){
+      const v=G.nations.get(vid);
+      if(v)h+=`<div style="color:var(--warn);font-size:9.5px;padding:2px 0">🎭 ${v.name}</div>`;
+    }
+  }
+  if(n.capHistory.length>1){
+    h+=`<div class="sec-title">遷都の歴史</div>`;
+    for(const c of n.capHistory)h+=`<div style="font-size:9px;color:var(--textD);padding:1px 0">${c.yr}年: [${c.x},${c.y}]</div>`;
+  }
+  p.innerHTML=h;
+}
+
+function selectNation(id){
+  G.sel=id;
+  renderNationDetail(G.nations.get(id));
+  renderMap();
+}
+
+// ═══════════════════════════════════════════════════════════
+// LOG UI
+// ═══════════════════════════════════════════════════════════
+function renderLog(){
+  const c=document.getElementById('log-body');
+  c.innerHTML=LOG.slice(0,120).map((e,i)=>`
+    <div class="log-item ${e.type} ${i<4?'fresh':''}">
+      <div class="log-yr">${e.yr} 年</div>
+      <div>${e.txt}</div>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// UPDATE UI
+// ═══════════════════════════════════════════════════════════
+function updateUI(){
+  document.getElementById('time-display').textContent=`Year ${G.year}`;
+  const alv=[...G.nations.values()].filter(n=>n.alive).length;
+  document.getElementById('n-count').textContent=`${alv} 国`;
+  if(G.sel){
+    const n=G.nations.get(G.sel);
+    if(n)renderNationDetail(n);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// TIME CONTROLS
+// ═══════════════════════════════════════════════════════════
+const SPEEDS=[0.25,0.5,1,2,4,100];
+const SPD_LBL=['×0.25','×0.5','×1','×2','×4','×100'];
+let spdIdx=2, paused=true, timer=null;
+
+function setSpeed(idx){
+  spdIdx=clamp(idx,0,5);
+  const sp=SPEEDS[spdIdx];
+  document.getElementById('speed-bar').value=spdIdx;
+  document.getElementById('spd-lbl').textContent=SPD_LBL[spdIdx];
+  document.getElementById('speed-badge').textContent=paused?'■ 停止中':`▶ ${SPD_LBL[spdIdx]}`;
+  document.querySelectorAll('#speed-btns .btn[data-spd]').forEach(b=>{
+    b.classList.toggle('active',parseFloat(b.dataset.spd)===sp);
+  });
+  if(!paused)restartTimer();
+}
+
+function restartTimer(){
+  if(timer)clearInterval(timer);
+  const sp=SPEEDS[spdIdx];
+  if(sp>=100){
+    timer=setInterval(()=>{for(let i=0;i<12;i++)step();},50);
+  } else {
+    const ms=Math.max(16,Math.round(300/sp));
+    timer=setInterval(step,ms);
+  }
+}
+
+function togglePause(){
+  paused=!paused;
+  const btn=document.getElementById('btn-pause');
+  if(paused){
+    if(timer){clearInterval(timer);timer=null;}
+    btn.textContent='▶ 再開';
+    document.getElementById('speed-badge').textContent='■ 停止中';
+  } else {
+    btn.textContent='⏸ 停止';
+    document.getElementById('speed-badge').textContent=`▶ ${SPD_LBL[spdIdx]}`;
+    restartTimer();
+  }
+}
+
+document.querySelectorAll('#speed-btns .btn[data-spd]').forEach(b=>{
+  b.addEventListener('click',()=>{
+    const sp=parseFloat(b.dataset.spd);
+    const idx=SPEEDS.indexOf(sp);
+    if(idx>=0)setSpeed(idx);
+    if(paused)togglePause();
+  });
+});
+document.getElementById('btn-pause').addEventListener('click',togglePause);
+document.getElementById('speed-bar').addEventListener('input',e=>setSpeed(parseInt(e.target.value)));
+
+// ═══════════════════════════════════════════════════════════
+// GENERATE
+// ═══════════════════════════════════════════════════════════
+function generate(){
+  if(!paused){togglePause();}
+  const seed=ri(1,99999);
+  G={grid:null,nations:new Map(),tick:0,year:0,nid:1,sel:null};
+  LOG.length=0; nColorCache.clear(); NG.reset();
+  G.grid=makeMap(seed);
+  G.nations=placeNations(G.grid,INIT_N);
+  for(const n of G.nations.values())log(`🏳 ${n.name} 建国 [${n.spirit.name}]`,'found');
+  document.getElementById('overlay').style.display='none';
+  renderMap(); updateUI(); renderLog();
+  renderNationDetail(null);
+  setTimeout(resetZoom, 50);
+}
+document.getElementById('btn-gen').addEventListener('click',generate);
+
+// ═══════════════════════════════════════════════════════════
+// SAVE / LOAD
+// ═══════════════════════════════════════════════════════════
+document.getElementById('btn-save').addEventListener('click',()=>{
+  if(!G.grid){alert('ゲームが開始されていません');return;}
+  const data={v:2,tick:G.tick,year:G.year,nid:G.nid,log:LOG.slice(0,60),
+    grid:[],nations:[]};
+  for(let y=0;y<GH;y++){
+    data.grid[y]=[];
+    for(let x=0;x<GW;x++){
+      const c=G.grid[y][x];
+      data.grid[y][x]={t:c.ter.id,o:c.own,c:c.cap||undefined};
+    }
+  }
+  for(const[,n]of G.nations){
+    data.nations.push({
+      id:n.id,name:n.name,color:n.color,spirit:n.spirit.name,stats:n.stats,
+      capital:n.capital,capHistory:n.capHistory,terr:[...n.terr],
+      rgauge:n.rgauge,age:n.age,alive:n.alive,
+      wars:[...n.wars],suzerain:n.suzerain,vassals:[...n.vassals],
+    });
+  }
+  const blob=new Blob([JSON.stringify(data)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=`historia_yr${G.year}.json`; a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('btn-load').addEventListener('click',()=>document.getElementById('load-file').click());
+document.getElementById('load-file').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const data=JSON.parse(ev.target.result);
+      if(!paused)togglePause();
+      G={grid:null,nations:new Map(),tick:data.tick,year:data.year,nid:data.nid,sel:null};
+      LOG.length=0; nColorCache.clear(); NG.reset();
+      if(data.log)LOG.push(...data.log);
+      // Restore grid
+      G.grid=[];
+      for(let y=0;y<GH;y++){
+        G.grid[y]=[];
+        for(let x=0;x<GW;x++){
+          const c=data.grid[y][x];
+          G.grid[y][x]={ter:T_ID[c.t]||T.OCEAN,own:c.o,cap:!!c.c,wz:false};
+        }
+      }
+      // Restore spirits
+      const SN={};for(const s of SPIRITS)SN[s.name]=s;
+      for(const nd of data.nations){
+        const n={...nd,
+          terr:new Set(nd.terr),wars:new Set(nd.wars),
+          vassals:new Set(nd.vassals),
+          spirit:SN[nd.spirit]||SPIRITS[0],
+          peaceCd:new Map(),warTicks:new Map(),
+        };
+        G.nations.set(n.id,n);
+        NG.used.add(n.name);
+      }
+      document.getElementById('overlay').style.display='none';
+      renderMap(); updateUI(); renderLog();
+      renderNationDetail(null);
+      alert(`ロード完了: Year ${G.year}`);
+    }catch(err){alert('ロードエラー: '+err.message);}
+  };
+  r.readAsText(f);
+  e.target.value='';
+});
+
+document.getElementById('btn-clrlog').addEventListener('click',()=>{LOG.length=0;renderLog();});
+
+// ═══════════════════════════════════════════════════════════
+// ZOOM / PAN
+// ═══════════════════════════════════════════════════════════
+let zoomLevel = 1.0;
+const mapArea = document.getElementById('map-area');
+const mapWrapper = document.getElementById('map-wrapper');
+
+function applyZoom() {
+  mapWrapper.style.transform = `scale(${zoomLevel})`;
+}
+function changeZoom(delta) {
+  zoomLevel = Math.max(0.3, Math.min(3.0, zoomLevel + delta));
+  applyZoom();
+}
+function resetZoom() {
+  const areaW = mapArea.clientWidth, areaH = mapArea.clientHeight;
+  const fitX = areaW / (GW * CS), fitY = areaH / (GH * CS);
+  zoomLevel = Math.min(fitX, fitY, 1.0);
+  applyZoom();
+  mapArea.scrollLeft = 0; mapArea.scrollTop = 0;
+}
+
+// Mouse wheel zoom
+mapArea.addEventListener('wheel', e => {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? -0.1 : 0.1;
+  const rect = mapArea.getBoundingClientRect();
+  const mx = e.clientX - rect.left + mapArea.scrollLeft;
+  const my = e.clientY - rect.top  + mapArea.scrollTop;
+  const prevZoom = zoomLevel;
+  zoomLevel = Math.max(0.3, Math.min(3.0, zoomLevel + delta));
+  applyZoom();
+  mapArea.scrollLeft = (mx / prevZoom) * zoomLevel - (e.clientX - rect.left);
+  mapArea.scrollTop  = (my / prevZoom) * zoomLevel - (e.clientY - rect.top);
+}, {passive:false});
+
+// Middle-click / drag pan
+let isDragging = false, dragSX = 0, dragSY = 0, dragScrollX = 0, dragScrollY = 0;
+mapArea.addEventListener('mousedown', e => {
+  if (e.button === 1 || e.button === 0) {
+    isDragging = true;
+    dragSX = e.clientX; dragSY = e.clientY;
+    dragScrollX = mapArea.scrollLeft; dragScrollY = mapArea.scrollTop;
+    mapArea.style.cursor = 'grabbing';
+    e.preventDefault();
+  }
+});
+window.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  mapArea.scrollLeft = dragScrollX - (e.clientX - dragSX);
+  mapArea.scrollTop  = dragScrollY - (e.clientY - dragSY);
+});
+window.addEventListener('mouseup', () => {
+  isDragging = false;
+  mapArea.style.cursor = 'grab';
+});
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+setSpeed(2);
+updateUI();
+</script>
+</body>
+</html>
